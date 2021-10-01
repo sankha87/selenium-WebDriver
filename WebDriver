@@ -1,0 +1,37 @@
+
+// Warning: No line numbers available in class file
+package org.openqa.selenium;
+
+import java.util.List;
+import java.util.Set;
+import org.openqa.selenium.WebDriver.Navigation;
+import org.openqa.selenium.WebDriver.Options;
+import org.openqa.selenium.WebDriver.TargetLocator;
+
+public interface WebDriver extends SearchContext {
+   void get(String var1);
+
+   String getCurrentUrl();
+
+   String getTitle();
+
+   List<WebElement> findElements(By var1);
+
+   WebElement findElement(By var1);
+
+   String getPageSource();
+
+   void close();
+
+   void quit();
+
+   Set<String> getWindowHandles();
+
+   String getWindowHandle();
+
+   TargetLocator switchTo();
+
+   Navigation navigate();
+
+   Options manage();
+}
