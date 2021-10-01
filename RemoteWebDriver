@@ -1,0 +1,992 @@
+/*     */ package org.openqa.selenium.remote;
+/*     */ 
+/*     */ import com.google.common.collect.ImmutableMap;
+/*     */ import com.google.common.collect.ImmutableSet.Builder;
+/*     */ import java.net.URL;
+/*     */ import java.util.Collection;
+/*     */ import java.util.Collections;
+/*     */ import java.util.Iterator;
+/*     */ import java.util.LinkedHashSet;
+/*     */ import java.util.List;
+/*     */ import java.util.Map;
+/*     */ import java.util.Objects;
+/*     */ import java.util.Set;
+/*     */ import java.util.Map.Entry;
+/*     */ import java.util.logging.Level;
+/*     */ import java.util.logging.Logger;
+/*     */ import java.util.stream.Collectors;
+/*     */ import java.util.stream.Stream;
+/*     */ import org.openqa.selenium.Beta;
+/*     */ import org.openqa.selenium.By;
+/*     */ import org.openqa.selenium.Capabilities;
+/*     */ import org.openqa.selenium.HasCapabilities;
+/*     */ import org.openqa.selenium.ImmutableCapabilities;
+/*     */ import org.openqa.selenium.JavascriptExecutor;
+/*     */ import org.openqa.selenium.MutableCapabilities;
+/*     */ import org.openqa.selenium.NoSuchElementException;
+/*     */ import org.openqa.selenium.OutputType;
+/*     */ import org.openqa.selenium.Platform;
+/*     */ import org.openqa.selenium.SearchContext;
+/*     */ import org.openqa.selenium.TakesScreenshot;
+/*     */ import org.openqa.selenium.WebDriver;
+/*     */ import org.openqa.selenium.WebDriverException;
+/*     */ import org.openqa.selenium.WebElement;
+/*     */ import org.openqa.selenium.WebDriver.Navigation;
+/*     */ import org.openqa.selenium.WebDriver.Options;
+/*     */ import org.openqa.selenium.WebDriver.TargetLocator;
+/*     */ import org.openqa.selenium.interactions.HasInputDevices;
+/*     */ import org.openqa.selenium.interactions.Interactive;
+/*     */ import org.openqa.selenium.interactions.Keyboard;
+/*     */ import org.openqa.selenium.interactions.Mouse;
+/*     */ import org.openqa.selenium.interactions.Sequence;
+/*     */ import org.openqa.selenium.internal.FindsByClassName;
+/*     */ import org.openqa.selenium.internal.FindsByCssSelector;
+/*     */ import org.openqa.selenium.internal.FindsById;
+/*     */ import org.openqa.selenium.internal.FindsByLinkText;
+/*     */ import org.openqa.selenium.internal.FindsByName;
+/*     */ import org.openqa.selenium.internal.FindsByTagName;
+/*     */ import org.openqa.selenium.internal.FindsByXPath;
+/*     */ import org.openqa.selenium.logging.LocalLogs;
+/*     */ import org.openqa.selenium.logging.LoggingHandler;
+/*     */ import org.openqa.selenium.logging.LoggingPreferences;
+/*     */ import org.openqa.selenium.logging.Logs;
+/*     */ import org.openqa.selenium.logging.NeedsLocalLogs;
+/*     */ import org.openqa.selenium.remote.RemoteWebDriver.1;
+/*     */ import org.openqa.selenium.remote.RemoteWebDriver.RemoteNavigation;
+/*     */ import org.openqa.selenium.remote.RemoteWebDriver.RemoteTargetLocator;
+/*     */ import org.openqa.selenium.remote.RemoteWebDriver.RemoteWebDriverOptions;
+/*     */ import org.openqa.selenium.remote.RemoteWebDriver.When;
+/*     */ import org.openqa.selenium.remote.internal.JsonToWebElementConverter;
+/*     */ import org.openqa.selenium.remote.internal.WebElementToJsonConverter;
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ @Augmentable
+/*     */ public class RemoteWebDriver implements WebDriver, JavascriptExecutor, FindsById, FindsByClassName, FindsByLinkText, FindsByName, FindsByCssSelector, FindsByTagName, FindsByXPath, HasInputDevices, HasCapabilities, Interactive, TakesScreenshot {
+/*     */    private static final Logger logger = Logger.getLogger(RemoteWebDriver.class.getName());
+/*     */    private Level level;
+/*     */    private ErrorHandler errorHandler;
+/*     */    private CommandExecutor executor;
+/*     */    private Capabilities capabilities;
+/*     */    private SessionId sessionId;
+/*     */    private FileDetector fileDetector;
+/*     */    private ExecuteMethod executeMethod;
+/*     */    private JsonToWebElementConverter converter;
+/*     */    private RemoteKeyboard keyboard;
+/*     */    private RemoteMouse mouse;
+/*     */    private Logs remoteLogs;
+/*     */    private LocalLogs localLogs;
+/*     */ 
+/*     */    public RemoteWebDriver(CommandExecutor executor, Capabilities capabilities) {
+/*  96 */       this.level = Level.FINE;
+/*     */ 
+/*  98 */       this.errorHandler = new ErrorHandler();
+/*     */ 
+/*     */ 
+/*     */ 
+/* 102 */       this.fileDetector = new UselessFileDetector();
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    protected RemoteWebDriver() {
+/*     */       this.level = Level.FINE;
+/*     */       this.errorHandler = new ErrorHandler();
+/*     */       this.fileDetector = new UselessFileDetector();
+/* 114 */       this.init(new ImmutableCapabilities());
+/* 115 */    }
+/*     */ 
+/*     */    public RemoteWebDriver(Capabilities capabilities) {
+/* 118 */       this((CommandExecutor)(new HttpCommandExecutor((URL)null)), capabilities);
+/* 119 */    }
+/*     */ 
+/*     */ 
+/* 122 */       this.executor = executor;
+/*     */ 
+/* 124 */       this.init(capabilities);
+/*     */ 
+/* 126 */       if (executor instanceof NeedsLocalLogs) {
+/* 127 */          ((NeedsLocalLogs)executor).setLocalLogs(this.localLogs);
+/*     */       }
+/*     */ 
+/*     */       try {
+/* 131 */          this.startSession(capabilities);
+/*     */       } catch (RuntimeException var6) {
+/*     */          try {
+/* 134 */             this.quit();
+/* 135 */          } catch (Exception var5) {
+/*     */             ;
+/*     */          }
+/*     */ 
+/* 139 */          throw var6;
+/*     */       }
+/* 141 */    }
+/*     */ 
+/*     */    public RemoteWebDriver(URL remoteAddress, Capabilities capabilities) {
+/* 144 */       this((CommandExecutor)(new HttpCommandExecutor(remoteAddress)), capabilities);
+/* 145 */    }
+/*     */ 
+/*     */    @Beta
+/*     */    public static RemoteWebDriverBuilder builder() {
+/* 149 */       return new RemoteWebDriverBuilder();
+/*     */    }
+/*     */ 
+/*     */    private void init(Capabilities capabilities) {
+/* 153 */       Capabilities capabilities = capabilities == null ? new ImmutableCapabilities() : capabilities;
+/*     */ 
+/* 155 */       logger.addHandler(LoggingHandler.getInstance());
+/*     */ 
+/* 157 */       this.converter = new JsonToWebElementConverter(this);
+/* 158 */       this.executeMethod = new RemoteExecuteMethod(this);
+/* 159 */       this.keyboard = new RemoteKeyboard(this.executeMethod);
+/* 160 */       this.mouse = new RemoteMouse(this.executeMethod);
+/*     */ 
+/* 162 */       Builder<String> builder = new Builder();
+/*     */ 
+/* 164 */       boolean isProfilingEnabled = ((Capabilities)capabilities).is("webdriver.logging.profiler.enabled");
+/* 165 */       if (isProfilingEnabled) {
+/* 166 */          builder.add("profiler");
+/*     */       }
+/*     */ 
+/* 169 */       LoggingPreferences mergedLoggingPrefs = new LoggingPreferences();
+/* 170 */       mergedLoggingPrefs.addPreferences((LoggingPreferences)((Capabilities)capabilities).getCapability("loggingPrefs"));
+/*     */ 
+/* 172 */       if (!mergedLoggingPrefs.getEnabledLogTypes().contains("client") || mergedLoggingPrefs.getLevel("client") != Level.OFF) {
+/*     */ 
+/* 174 */          builder.add("client");
+/*     */       }
+/*     */ 
+/* 177 */       Set<String> logTypesToInclude = builder.build();
+/*     */ 
+/* 179 */       LocalLogs performanceLogger = LocalLogs.getStoringLoggerInstance(logTypesToInclude);
+/* 180 */       LocalLogs clientLogs = LocalLogs.getHandlerBasedLoggerInstance(LoggingHandler.getInstance(), logTypesToInclude);
+/*     */ 
+/* 182 */       this.localLogs = LocalLogs.getCombinedLogsHolder(clientLogs, performanceLogger);
+/* 183 */       this.remoteLogs = new RemoteLogs(this.executeMethod, this.localLogs);
+/* 184 */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public void setFileDetector(FileDetector detector) {
+/* 196 */       if (detector == null) {
+/* 197 */          throw new WebDriverException("You may not set a file detector that is null");
+/*     */       } else {
+/* 199 */          this.fileDetector = detector;      }
+/* 200 */    }
+/*     */ 
+/*     */    public SessionId getSessionId() {
+/* 203 */       return this.sessionId;
+/*     */    }
+/*     */ 
+/*     */    protected void setSessionId(String opaqueKey) {
+/* 207 */       this.sessionId = new SessionId(opaqueKey);
+/* 208 */    }
+/*     */ 
+/*     */    protected void startSession(Capabilities capabilities) {
+/* 211 */       Map<String, ?> parameters = ImmutableMap.of("desiredCapabilities", capabilities);
+/*     */ 
+/* 213 */       Response response = this.execute("newSession", parameters);
+/*     */ 
+/* 215 */       Map<String, Object> rawCapabilities = (Map)response.getValue();
+/* 216 */       MutableCapabilities returnedCapabilities = new MutableCapabilities();
+/* 217 */       Iterator var6 = rawCapabilities.entrySet().iterator();
+/*     */       while(var6.hasNext()) {         Entry<String, Object> entry = (Entry)var6.next();
+/* 219 */          if (!"platform".equals(entry.getKey()) && !"platformName".equals(entry.getKey())) {
+/*     */ 
+/*     */ 
+/* 222 */             returnedCapabilities.setCapability((String)entry.getKey(), entry.getValue());
+/*     */          }      }
+/* 224 */       String platformString = (String)rawCapabilities.getOrDefault("platform", rawCapabilities.get("platformName"));
+/*     */ 
+/*     */       Platform platform;
+/*     */       try {
+/* 228 */          if (platformString != null && !"".equals(platformString)) {         } else {
+/* 229 */             platform = Platform.ANY;
+/*     */ 
+/* 231 */             platform = Platform.fromString(platformString);
+/*     */          }
+/* 233 */       } catch (WebDriverException var9) {
+/*     */ 
+/*     */ 
+/* 236 */          platform = Platform.extractFromSysProperty(platformString);
+/*     */       }
+/* 238 */       returnedCapabilities.setCapability("platform", platform);
+/* 239 */       returnedCapabilities.setCapability("platformName", platform);
+/*     */ 
+/* 241 */       if (rawCapabilities.containsKey("javascriptEnabled")) {
+/* 242 */          Object raw = rawCapabilities.get("javascriptEnabled");
+/* 243 */          if (raw instanceof String) {
+/* 244 */             returnedCapabilities.setCapability("javascriptEnabled", Boolean.parseBoolean((String)raw));
+/* 245 */          } else if (raw instanceof Boolean) {
+/* 246 */             returnedCapabilities.setCapability("javascriptEnabled", (Boolean)raw);
+/*     */          }
+/*     */       } else {
+/* 249 */          returnedCapabilities.setCapability("javascriptEnabled", true);
+/*     */       }
+/*     */ 
+/* 252 */       this.capabilities = returnedCapabilities;
+/* 253 */       this.sessionId = new SessionId(response.getSessionId());
+/* 254 */    }
+/*     */ 
+/*     */    public ErrorHandler getErrorHandler() {
+/* 257 */       return this.errorHandler;
+/*     */    }
+/*     */ 
+/*     */    public void setErrorHandler(ErrorHandler handler) {
+/* 261 */       this.errorHandler = handler;
+/* 262 */    }
+/*     */ 
+/*     */    public CommandExecutor getCommandExecutor() {
+/* 265 */       return this.executor;
+/*     */    }
+/*     */ 
+/*     */    protected void setCommandExecutor(CommandExecutor executor) {
+/* 269 */       this.executor = executor;
+/* 270 */    }
+/*     */ 
+/*     */    public Capabilities getCapabilities() {
+/* 273 */       return this.capabilities;
+/*     */    }
+/*     */ 
+/*     */    public void get(String url) {
+/* 277 */       this.execute("get", ImmutableMap.of("url", url));
+/* 278 */    }
+/*     */ 
+/*     */    public String getTitle() {
+/* 281 */       Response response = this.execute("getTitle");
+/* 282 */       Object value = response.getValue();
+/* 283 */       return value == null ? "" : value.toString();
+/*     */    }
+/*     */ 
+/*     */    public String getCurrentUrl() {
+/* 287 */       Response response = this.execute("getCurrentUrl");
+/* 288 */       if (response != null && response.getValue() != null) {      } else {
+/* 289 */          throw new WebDriverException("Remote browser did not respond to getCurrentUrl");
+/*     */ 
+/* 291 */          return response.getValue().toString();
+/*     */       }
+/*     */    }
+/*     */    public <X> X getScreenshotAs(OutputType<X> outputType) throws WebDriverException {
+/* 295 */       Response response = this.execute("screenshot");
+/* 296 */       Object result = response.getValue();      String base64EncodedPng;
+/* 297 */       if (result instanceof String) {
+/* 298 */          base64EncodedPng = (String)result;
+/* 299 */          return outputType.convertFromBase64Png(base64EncodedPng);
+/* 300 */       } else if (result instanceof byte[]) {
+/* 301 */          base64EncodedPng = new String((byte[])((byte[])result));
+/* 302 */          return outputType.convertFromBase64Png(base64EncodedPng);
+/*     */       } else {
+/* 304 */          throw new RuntimeException(String.format("Unexpected result for %s command: %s", "screenshot", result == null ? "null" : result.getClass().getName() + " instance"));
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public List<WebElement> findElements(By by) {
+/* 311 */       return by.findElements(this);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElement(By by) {
+/* 315 */       return by.findElement(this);
+/*     */    }
+/*     */ 
+/*     */    protected WebElement findElement(String by, String using) {
+/* 319 */       if (using == null) {
+/* 320 */          throw new IllegalArgumentException("Cannot find elements when the selector is null.");
+/*     */ 
+/*     */       } else {
+/* 323 */          Response response = this.execute("findElement", ImmutableMap.of("using", by, "value", using));
+/*     */ 
+/* 325 */          Object value = response.getValue();
+/* 326 */          if (value == null) {
+/* 327 */             throw new NoSuchElementException(String.format("Cannot locate an element using %s=%s", by, using));
+/*     */          } else {
+/*     */             WebElement element;
+/*     */             try {
+/* 331 */                element = (WebElement)value;
+/* 332 */             } catch (ClassCastException var7) {
+/* 333 */                throw new WebDriverException("Returned value cannot be converted to WebElement: " + value, var7);
+/*     */             }
+/* 335 */             this.setFoundBy(this, element, by, using);
+/* 336 */             return element;
+/*     */          }
+/*     */       }
+/*     */    }   protected void setFoundBy(SearchContext context, WebElement element, String by, String using) {
+/* 340 */       if (element instanceof RemoteWebElement) {
+/* 341 */          RemoteWebElement remoteElement = (RemoteWebElement)element;
+/* 342 */          remoteElement.setFoundBy(context, by, using);
+/* 343 */          remoteElement.setFileDetector(this.getFileDetector());
+/*     */       }
+/* 345 */    }
+/*     */ 
+/*     */ 
+/*     */    protected List<WebElement> findElements(String by, String using) {
+/* 349 */       if (using == null) {
+/* 350 */          throw new IllegalArgumentException("Cannot find elements when the selector is null.");
+/*     */ 
+/*     */       } else {
+/* 353 */          Response response = this.execute("findElements", ImmutableMap.of("using", by, "value", using));
+/*     */ 
+/* 355 */          Object value = response.getValue();
+/* 356 */          if (value == null) {
+/* 357 */             return Collections.emptyList();
+/*     */          } else {
+/*     */             List allElements;
+/*     */             try {
+/* 361 */                allElements = (List)value;
+/* 362 */             } catch (ClassCastException var8) {
+/* 363 */                throw new WebDriverException("Returned value cannot be converted to List<WebElement>: " + value, var8);
+/*     */             }
+/* 365 */             Iterator var6 = allElements.iterator();            while(var6.hasNext()) {               WebElement element = (WebElement)var6.next();
+/* 366 */                this.setFoundBy(this, element, by, using);
+/*     */             }
+/* 368 */             return allElements;
+/*     */          }
+/*     */       }
+/*     */    }   public WebElement findElementById(String using) {
+/* 372 */       return this.findElement("id", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsById(String using) {
+/* 376 */       return this.findElements("id", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByLinkText(String using) {
+/* 380 */       return this.findElement("link text", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByLinkText(String using) {
+/* 384 */       return this.findElements("link text", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByPartialLinkText(String using) {
+/* 388 */       return this.findElement("partial link text", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByPartialLinkText(String using) {
+/* 392 */       return this.findElements("partial link text", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByTagName(String using) {
+/* 396 */       return this.findElement("tag name", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByTagName(String using) {
+/* 400 */       return this.findElements("tag name", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByName(String using) {
+/* 404 */       return this.findElement("name", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByName(String using) {
+/* 408 */       return this.findElements("name", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByClassName(String using) {
+/* 412 */       return this.findElement("class name", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByClassName(String using) {
+/* 416 */       return this.findElements("class name", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByCssSelector(String using) {
+/* 420 */       return this.findElement("css selector", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByCssSelector(String using) {
+/* 424 */       return this.findElements("css selector", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByXPath(String using) {
+/* 428 */       return this.findElement("xpath", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByXPath(String using) {
+/* 432 */       return this.findElements("xpath", using);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public String getPageSource() {
+/* 438 */       return (String)this.execute("getPageSource").getValue();
+/*     */    }
+/*     */ 
+/*     */    public void close() {
+/* 442 */       this.execute("close");
+/* 443 */    }
+/*     */ 
+/*     */ 
+/*     */    public void quit() {
+/* 447 */       if (this.sessionId != null) {         }      }
+/* 448 */    }
+/*     */ 
+/*     */ 
+/*     */          try {
+/* 452 */             this.execute("quit");
+/*     */          } finally {
+/* 454 */             this.sessionId = null;
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public Set<String> getWindowHandles() {
+/* 460 */       Response response = this.execute("getWindowHandles");
+/* 461 */       Object value = response.getValue();
+/*     */       try {
+/* 463 */          List<String> returnedValues = (List)value;
+/* 464 */          return new LinkedHashSet(returnedValues);
+/* 465 */       } catch (ClassCastException var4) {
+/* 466 */          throw new WebDriverException("Returned value cannot be converted to List<String>: " + value, var4);
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public String getWindowHandle() {
+/* 472 */       return String.valueOf(this.execute("getCurrentWindowHandle").getValue());
+/*     */    }
+/*     */ 
+/*     */    public Object executeScript(String script, Object... args) {
+/* 476 */       if (!this.isJavascriptEnabled()) {
+/* 477 */          throw new UnsupportedOperationException("You must be using an underlying instance of WebDriver that supports executing javascript");
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */       } else {
+/* 482 */          script = script.replaceAll("\"", "\\\"");
+/*     */ 
+/* 484 */          List<Object> convertedArgs = (List)Stream.of(args).map(new WebElementToJsonConverter()).collect(Collectors.toList());
+/*     */ 
+/*     */ 
+/* 487 */          Map<String, ?> params = ImmutableMap.of("script", script, "args", convertedArgs);
+/*     */ 
+/* 489 */          return this.execute("executeScript", params).getValue();
+/*     */       }
+/*     */    }
+/*     */    public Object executeAsyncScript(String script, Object... args) {
+/* 493 */       if (!this.isJavascriptEnabled()) {
+/* 494 */          throw new UnsupportedOperationException("You must be using an underlying instance of WebDriver that supports executing javascript");
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */       } else {
+/* 499 */          script = script.replaceAll("\"", "\\\"");
+/*     */ 
+/* 501 */          List<Object> convertedArgs = (List)Stream.of(args).map(new WebElementToJsonConverter()).collect(Collectors.toList());
+/*     */ 
+/*     */ 
+/* 504 */          Map<String, ?> params = ImmutableMap.of("script", script, "args", convertedArgs);
+/*     */ 
+/* 506 */          return this.execute("executeAsyncScript", params).getValue();
+/*     */       }
+/*     */    }
+/*     */    private boolean isJavascriptEnabled() {
+/* 510 */       return this.capabilities.is("javascriptEnabled");
+/*     */    }
+/*     */ 
+/*     */    public TargetLocator switchTo() {
+/* 514 */       return new RemoteTargetLocator(this);
+/*     */    }
+/*     */ 
+/*     */    public Navigation navigate() {
+/* 518 */       return new RemoteNavigation(this, (1)null);
+/*     */    }
+/*     */ 
+/*     */    public Options manage() {
+/* 522 */       return new RemoteWebDriverOptions(this);
+/*     */    }
+/*     */ 
+/*     */    protected void setElementConverter(JsonToWebElementConverter converter) {
+/* 526 */       this.converter = (JsonToWebElementConverter)Objects.requireNonNull(converter, "Element converter must not be null");
+/* 527 */    }
+/*     */ 
+/*     */    protected JsonToWebElementConverter getElementConverter() {
+/* 530 */       return this.converter;
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public void setLogLevel(Level level) {
+/* 539 */       this.level = level;
+/* 540 */    }
+/*     */ 
+/*     */    protected Response execute(String driverCommand, Map<String, ?> parameters) {
+/* 543 */       Command command = new Command(this.sessionId, driverCommand, parameters);
+/*     */ 
+/*     */ 
+/* 546 */       long start = System.currentTimeMillis();
+/* 547 */       String currentName = Thread.currentThread().getName();
+/* 548 */       Thread.currentThread().setName(String.format("Forwarding %s on session %s to remote", driverCommand, this.sessionId));
+/*     */       Response response;      label130: {         Object value;
+/*     */          try {
+/* 551 */             this.log(this.sessionId, command.getName(), command, When.BEFORE);
+/* 552 */             response = this.executor.execute(command);
+/* 553 */             this.log(this.sessionId, command.getName(), command, When.AFTER);
+/*     */ 
+/* 555 */             if (response != null) {               break label130;            }
+/* 556 */             value = null;
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/* 561 */                value = this.getElementConverter().apply(response.getValue());
+/* 562 */                response.setValue(value);
+/* 563 */          } catch (WebDriverException var17) {
+/* 564 */             throw var17;
+/* 565 */          } catch (Exception var18) {
+/* 566 */             this.log(this.sessionId, command.getName(), command, When.EXCEPTION);
+/* 567 */             String errorMessage = "Error communicating with the remote browser. It may have died.";
+/*     */ 
+/* 569 */             if (driverCommand.equals("newSession")) {
+/* 570 */                errorMessage = "Could not start a new session. Possible causes are invalid address of the remote server or browser start-up failure.";
+/*     */             }
+/*     */ 
+/* 573 */             UnreachableBrowserException ube = new UnreachableBrowserException(errorMessage, var18);
+/* 574 */             if (this.getSessionId() != null) {
+/* 575 */                ube.addInfo("Session ID", this.getSessionId().toString());
+/*     */             }
+/* 577 */             if (this.getCapabilities() != null) {
+/* 578 */                ube.addInfo("Capabilities", this.getCapabilities().toString());
+/*     */             }
+/* 580 */             throw ube;
+/*     */          } finally {
+/* 582 */             Thread.currentThread().setName(currentName);
+/*     */          }         return (Response)value;      }
+/*     */ 
+/*     */       try {
+/* 586 */          this.errorHandler.throwIfResponseFailed(response, System.currentTimeMillis() - start);
+/* 587 */       } catch (WebDriverException var16) {
+/* 588 */          if (parameters != null && parameters.containsKey("using") && parameters.containsKey("value")) {
+/* 589 */             var16.addInfo("*** Element info", String.format("{Using=%s, value=%s}", parameters.get("using"), parameters.get("value")));
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */          }
+/*     */ 
+/* 596 */          var16.addInfo("Driver info", this.getClass().getName());
+/* 597 */          if (this.getSessionId() != null) {
+/* 598 */             var16.addInfo("Session ID", this.getSessionId().toString());
+/*     */          }
+/* 600 */          if (this.getCapabilities() != null) {
+/* 601 */             var16.addInfo("Capabilities", this.getCapabilities().toString());
+/*     */          }
+/* 603 */          throw var16;
+/*     */ 
+/* 605 */          return response;
+/*     */       }
+/*     */    }
+/*     */    protected Response execute(String command) {
+/* 609 */       return this.execute(command, ImmutableMap.of());
+/*     */    }
+/*     */ 
+/*     */    protected ExecuteMethod getExecuteMethod() {
+/* 613 */       return this.executeMethod;
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public void perform(Collection<Sequence> actions) {
+/* 618 */       this.execute("actions", ImmutableMap.of("actions", actions));
+/* 619 */    }
+/*     */ 
+/*     */ 
+/*     */    public void resetInputState() {
+/* 623 */       this.execute("clearActionState");
+/* 624 */    }
+/*     */ 
+/*     */    public Keyboard getKeyboard() {
+/* 627 */       return this.keyboard;
+/*     */    }
+/*     */ 
+/*     */    public Mouse getMouse() {
+/* 631 */       return this.mouse;
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    protected void log(SessionId sessionId, String commandName, Object toLog, When when) {
+/* 643 */       if (logger.isLoggable(this.level)) {         }      }
+/* 644 */    }
+/*     */ 
+/* 646 */          String text = String.valueOf(toLog);
+/* 647 */          if ((commandName.equals("executeScript") || commandName.equals("executeAsyncScript")) && text.length() > 100 && Boolean.getBoolean("webdriver.remote.shorten_log_messages")) {
+/*     */ 
+/*     */ 
+/* 650 */             text = text.substring(0, 100) + "...";
+/*     */          }
+/*     */ 
+/* 653 */          switch(1.$SwitchMap$org$openqa$selenium$remote$RemoteWebDriver$When[when.ordinal()]) {
+/*     */          case 1:
+/* 655 */             logger.log(this.level, "Executing: " + commandName + " " + text);
+/* 656 */             break;
+/*     */          case 2:
+/* 658 */             logger.log(this.level, "Executed: " + text);
+/* 659 */             break;
+/*     */          case 3:
+/* 661 */             logger.log(this.level, "Exception: " + text);
+/* 662 */             break;
+/*     */          default:
+/* 664 */             logger.log(this.level, text);
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public FileDetector getFileDetector() {
+/* 670 */       return this.fileDetector;
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public String toString() {
+/* 975 */       Capabilities caps = this.getCapabilities();
+/* 976 */       if (caps == null) {
+/* 977 */          return super.toString();
+/*     */ 
+/*     */ 
+/*     */       } else {
+/* 981 */          Object platform = caps.getCapability("platformName");
+/* 982 */          if (!(platform instanceof String)) {
+/* 983 */             platform = caps.getCapability("platform");
+/*     */          }
+/* 985 */          if (platform == null) {
+/* 986 */             platform = "unknown";
+/*     */          }
+/*     */ 
+/* 989 */          return String.format("%s: %s on %s (%s)", this.getClass().getSimpleName(), caps.getBrowserName(), platform, this.getSessionId());
+/*     */       }
+/*     */    }
+/*     */ }
