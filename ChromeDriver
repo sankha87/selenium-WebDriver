@@ -1,0 +1,238 @@
+/*     */ package org.openqa.selenium.chrome;
+/*     */ 
+/*     */ import com.google.common.collect.ImmutableMap;
+/*     */ import org.openqa.selenium.Capabilities;
+/*     */ import org.openqa.selenium.WebDriverException;
+/*     */ import org.openqa.selenium.html5.LocalStorage;
+/*     */ import org.openqa.selenium.html5.Location;
+/*     */ import org.openqa.selenium.html5.LocationContext;
+/*     */ import org.openqa.selenium.html5.SessionStorage;
+/*     */ import org.openqa.selenium.html5.WebStorage;
+/*     */ import org.openqa.selenium.interactions.HasTouchScreen;
+/*     */ import org.openqa.selenium.interactions.TouchScreen;
+/*     */ import org.openqa.selenium.mobile.NetworkConnection;
+/*     */ import org.openqa.selenium.mobile.NetworkConnection.ConnectionType;
+/*     */ import org.openqa.selenium.remote.FileDetector;
+/*     */ import org.openqa.selenium.remote.RemoteTouchScreen;
+/*     */ import org.openqa.selenium.remote.RemoteWebDriver;
+/*     */ import org.openqa.selenium.remote.html5.RemoteLocationContext;
+/*     */ import org.openqa.selenium.remote.html5.RemoteWebStorage;
+/*     */ import org.openqa.selenium.remote.mobile.RemoteNetworkConnection;
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ public class ChromeDriver extends RemoteWebDriver implements LocationContext, WebStorage, HasTouchScreen, NetworkConnection {
+/*     */    private RemoteLocationContext locationContext;
+/*     */    private RemoteWebStorage webStorage;
+/*     */    private TouchScreen touchScreen;
+/*     */    private RemoteNetworkConnection networkConnection;
+/*     */ 
+/*     */    public ChromeDriver() {
+/* 123 */       this(ChromeDriverService.createDefaultService(), new ChromeOptions());
+/* 124 */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public ChromeDriver(ChromeDriverService service) {
+/* 134 */       this(service, new ChromeOptions());
+/* 135 */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    @Deprecated
+/*     */    public ChromeDriver(Capabilities capabilities) {
+/* 147 */       this(ChromeDriverService.createDefaultService(), capabilities);
+/* 148 */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public ChromeDriver(ChromeOptions options) {
+/* 157 */       this(ChromeDriverService.createDefaultService(), options);
+/* 158 */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public ChromeDriver(ChromeDriverService service, ChromeOptions options) {
+/* 168 */       this(service, (Capabilities)options);
+/* 169 */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    @Deprecated
+/*     */    public ChromeDriver(ChromeDriverService service, Capabilities capabilities) {
+/* 181 */       super(new ChromeDriverCommandExecutor(service), capabilities);
+/* 182 */       this.locationContext = new RemoteLocationContext(this.getExecuteMethod());
+/* 183 */       this.webStorage = new RemoteWebStorage(this.getExecuteMethod());
+/* 184 */       this.touchScreen = new RemoteTouchScreen(this.getExecuteMethod());
+/* 185 */       this.networkConnection = new RemoteNetworkConnection(this.getExecuteMethod());
+/* 186 */    }
+/*     */ 
+/*     */ 
+/*     */    public void setFileDetector(FileDetector detector) {
+/* 190 */       throw new WebDriverException("Setting the file detector only works on remote webdriver instances obtained via RemoteWebDriver");
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public LocalStorage getLocalStorage() {
+/* 197 */       return this.webStorage.getLocalStorage();
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public SessionStorage getSessionStorage() {
+/* 202 */       return this.webStorage.getSessionStorage();
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public Location location() {
+/* 207 */       return this.locationContext.location();
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public void setLocation(Location location) {
+/* 212 */       this.locationContext.setLocation(location);
+/* 213 */    }
+/*     */ 
+/*     */ 
+/*     */    public TouchScreen getTouch() {
+/* 217 */       return this.touchScreen;
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public ConnectionType getNetworkConnection() {
+/* 222 */       return this.networkConnection.getNetworkConnection();
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public ConnectionType setNetworkConnection(ConnectionType type) {
+/* 227 */       return this.networkConnection.setNetworkConnection(type);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public void launchApp(String id) {
+/* 236 */       this.execute("launchApp", ImmutableMap.of("id", id));
+/* 237 */    }
+/*     */ }
