@@ -1,0 +1,417 @@
+/*     */ package org.openqa.selenium.remote;
+/*     */ 
+/*     */ import com.google.common.collect.ImmutableMap;
+/*     */ import java.io.File;
+/*     */ import java.io.IOException;
+/*     */ import java.util.Collections;
+/*     */ import java.util.List;
+/*     */ import java.util.Map;
+/*     */ import java.util.function.Consumer;
+/*     */ import org.openqa.selenium.Beta;
+/*     */ import org.openqa.selenium.By;
+/*     */ import org.openqa.selenium.Dimension;
+/*     */ import org.openqa.selenium.NoSuchElementException;
+/*     */ import org.openqa.selenium.OutputType;
+/*     */ import org.openqa.selenium.Point;
+/*     */ import org.openqa.selenium.Rectangle;
+/*     */ import org.openqa.selenium.SearchContext;
+/*     */ import org.openqa.selenium.TakesScreenshot;
+/*     */ import org.openqa.selenium.WebDriver;
+/*     */ import org.openqa.selenium.WebDriverException;
+/*     */ import org.openqa.selenium.WebElement;
+/*     */ import org.openqa.selenium.WrapsDriver;
+/*     */ import org.openqa.selenium.WrapsElement;
+/*     */ import org.openqa.selenium.interactions.Coordinates;
+/*     */ import org.openqa.selenium.interactions.Locatable;
+/*     */ import org.openqa.selenium.internal.FindsByClassName;
+/*     */ import org.openqa.selenium.internal.FindsByCssSelector;
+/*     */ import org.openqa.selenium.internal.FindsById;
+/*     */ import org.openqa.selenium.internal.FindsByLinkText;
+/*     */ import org.openqa.selenium.internal.FindsByName;
+/*     */ import org.openqa.selenium.internal.FindsByTagName;
+/*     */ import org.openqa.selenium.internal.FindsByXPath;
+/*     */ import org.openqa.selenium.internal.HasIdentity;
+/*     */ import org.openqa.selenium.io.Zip;
+/*     */ import org.openqa.selenium.remote.RemoteWebElement.1;
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ public class RemoteWebElement implements WebElement, FindsByLinkText, FindsById, FindsByName, FindsByTagName, FindsByClassName, FindsByCssSelector, FindsByXPath, WrapsDriver, HasIdentity, TakesScreenshot, Locatable {
+/*     */    private String foundBy;
+/*     */    protected String id;
+/*     */    protected RemoteWebDriver parent;
+/*     */    protected FileDetector fileDetector;
+/*     */ 
+/*     */    protected void setFoundBy(SearchContext foundFrom, String locator, String term) {
+/*  64 */       this.foundBy = String.format("[%s] -> %s: %s", foundFrom, locator, term);
+/*  65 */    }
+/*     */ 
+/*     */    public void setParent(RemoteWebDriver parent) {
+/*  68 */       this.parent = parent;
+/*  69 */    }
+/*     */ 
+/*     */    public String getId() {
+/*  72 */       return this.id;
+/*     */    }
+/*     */ 
+/*     */    public void setId(String id) {
+/*  76 */       this.id = id;
+/*  77 */    }
+/*     */ 
+/*     */    public void setFileDetector(FileDetector detector) {
+/*  80 */       this.fileDetector = detector;
+/*  81 */    }
+/*     */ 
+/*     */    public void click() {
+/*  84 */       this.execute("clickElement", ImmutableMap.of("id", this.id));
+/*  85 */    }
+/*     */ 
+/*     */    public void submit() {
+/*  88 */       this.execute("submitElement", ImmutableMap.of("id", this.id));
+/*  89 */    }
+/*     */ 
+/*     */    public void sendKeys(CharSequence... keysToSend) {
+/*  92 */       if (keysToSend != null && keysToSend.length != 0) {      } else {         CharSequence[] var2 = keysToSend;         int var3 = keysToSend.length;
+/*  93 */          throw new IllegalArgumentException("Keys to send should be a not null CharSequence");
+/*     */ 
+/*  95 */          for(int var4 = 0; var4 < var3; ++var4) {            CharSequence cs = var2[var4];
+/*  96 */             if (cs == null) {
+/*  97 */                throw new IllegalArgumentException("Keys to send should be a not null CharSequence");
+/*     */             }         }
+/*     */ 
+/* 100 */          File localFile = this.fileDetector.getLocalFile(keysToSend);
+/* 101 */          if (localFile != null) {
+/* 102 */             String remotePath = this.upload(localFile);
+/* 103 */             keysToSend = new CharSequence[]{remotePath};
+/*     */          }
+/*     */ 
+/* 106 */          this.execute("sendKeysToElement", ImmutableMap.of("id", this.id, "value", keysToSend));      }
+/* 107 */    }
+/*     */ 
+/*     */    private String upload(File localFile) {
+/* 110 */       if (!localFile.isFile()) {
+/* 111 */          throw new WebDriverException("You may only upload files: " + localFile);
+/*     */ 
+/*     */       } else {
+/*     */          try {
+/* 115 */             String zip = Zip.zip(localFile);
+/* 116 */             Response response = this.execute("uploadFile", ImmutableMap.of("file", zip));
+/* 117 */             return (String)response.getValue();
+/* 118 */          } catch (IOException var4) {
+/* 119 */             throw new WebDriverException("Cannot upload " + localFile, var4);
+/*     */          }
+/*     */       }
+/*     */    }
+/*     */    public void clear() {
+/* 124 */       this.execute("clearElement", ImmutableMap.of("id", this.id));
+/* 125 */    }
+/*     */ 
+/*     */    public String getTagName() {
+/* 128 */       return (String)this.execute("getElementTagName", ImmutableMap.of("id", this.id)).getValue();
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public String getAttribute(String name) {
+/* 133 */       return stringValueOf(this.execute("getElementAttribute", ImmutableMap.of("id", this.id, "name", name)).getValue());
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    private static String stringValueOf(Object o) {
+/* 139 */       return o == null ? null : String.valueOf(o);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public boolean isSelected() {
+/* 146 */       Object value = this.execute("isElementSelected", ImmutableMap.of("id", this.id)).getValue();
+/*     */ 
+/*     */       try {
+/* 149 */          return (Boolean)value;
+/* 150 */       } catch (ClassCastException var3) {
+/* 151 */          throw new WebDriverException("Returned value cannot be converted to Boolean: " + value, var3);
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */    public boolean isEnabled() {
+/* 156 */       Object value = this.execute("isElementEnabled", ImmutableMap.of("id", this.id)).getValue();
+/*     */ 
+/*     */       try {
+/* 159 */          return (Boolean)value;
+/* 160 */       } catch (ClassCastException var3) {
+/* 161 */          throw new WebDriverException("Returned value cannot be converted to Boolean: " + value, var3);
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */    public String getText() {
+/* 166 */       Response response = this.execute("getElementText", ImmutableMap.of("id", this.id));
+/* 167 */       return (String)response.getValue();
+/*     */    }
+/*     */ 
+/*     */    public String getCssValue(String propertyName) {
+/* 171 */       Response response = this.execute("getElementValueOfCssProperty", ImmutableMap.of("id", this.id, "propertyName", propertyName));
+/*     */ 
+/* 173 */       return (String)response.getValue();
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElements(By by) {
+/* 177 */       return by.findElements(this);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElement(By by) {
+/* 181 */       return by.findElement(this);
+/*     */    }
+/*     */ 
+/*     */    protected WebElement findElement(String using, String value) {
+/* 185 */       Response response = this.execute("findChildElement", ImmutableMap.of("id", this.id, "using", using, "value", value));
+/*     */ 
+/*     */ 
+/* 188 */       Object responseValue = response.getValue();
+/* 189 */       if (responseValue == null) {
+/* 190 */          throw new NoSuchElementException(String.format("Cannot locate an element using %s=%s", using, value));
+/*     */       } else {
+/*     */          WebElement element;
+/*     */          try {
+/* 194 */             element = (WebElement)responseValue;
+/* 195 */          } catch (ClassCastException var7) {
+/* 196 */             throw new WebDriverException("Returned value cannot be converted to WebElement: " + value, var7);
+/*     */          }
+/* 198 */          this.parent.setFoundBy(this, element, using, value);
+/* 199 */          return element;
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */    protected List<WebElement> findElements(String using, String value) {
+/* 204 */       Response response = this.execute("findChildElements", ImmutableMap.of("id", this.id, "using", using, "value", value));
+/*     */ 
+/* 206 */       Object responseValue = response.getValue();
+/* 207 */       if (responseValue == null) {
+/* 208 */          return Collections.emptyList();
+/*     */       } else {
+/*     */          List allElements;
+/*     */          try {
+/* 212 */             allElements = (List)responseValue;
+/* 213 */          } catch (ClassCastException var7) {
+/* 214 */             throw new WebDriverException("Returned value cannot be converted to List<WebElement>: " + responseValue, var7);
+/*     */          }
+/* 216 */          allElements.forEach((element) -> {            this.parent.setFoundBy(this, element, using, value);         });
+/* 217 */          return allElements;
+/*     */       }
+/*     */    }
+/*     */    public WebElement findElementById(String using) {
+/* 221 */       return this.findElement("id", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsById(String using) {
+/* 225 */       return this.findElements("id", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByLinkText(String using) {
+/* 229 */       return this.findElement("link text", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByLinkText(String using) {
+/* 233 */       return this.findElements("link text", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByName(String using) {
+/* 237 */       return this.findElement("name", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByName(String using) {
+/* 241 */       return this.findElements("name", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByClassName(String using) {
+/* 245 */       return this.findElement("class name", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByClassName(String using) {
+/* 249 */       return this.findElements("class name", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByCssSelector(String using) {
+/* 253 */       return this.findElement("css selector", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByCssSelector(String using) {
+/* 257 */       return this.findElements("css selector", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByXPath(String using) {
+/* 261 */       return this.findElement("xpath", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByXPath(String using) {
+/* 265 */       return this.findElements("xpath", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByPartialLinkText(String using) {
+/* 269 */       return this.findElement("partial link text", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByPartialLinkText(String using) {
+/* 273 */       return this.findElements("partial link text", using);
+/*     */    }
+/*     */ 
+/*     */    public WebElement findElementByTagName(String using) {
+/* 277 */       return this.findElement("tag name", using);
+/*     */    }
+/*     */ 
+/*     */    public List<WebElement> findElementsByTagName(String using) {
+/* 281 */       return this.findElements("tag name", using);
+/*     */    }
+/*     */ 
+/*     */    protected Response execute(String command, Map<String, ?> parameters) {
+/* 285 */       return this.parent.execute(command, parameters);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public boolean equals(Object obj) {
+/* 290 */       if (!(obj instanceof WebElement)) {
+/* 291 */          return false;
+/*     */       } else {
+/*     */          WebElement other;
+/* 294 */          for(other = (WebElement)obj; other instanceof WrapsElement; other = ((WrapsElement)other).getWrappedElement()) {
+/*     */ 
+/*     */             ;
+/*     */          }
+/*     */ 
+/* 299 */          if (!(other instanceof RemoteWebElement)) {
+/* 300 */             return false;
+/*     */ 
+/*     */          } else {
+/* 303 */             RemoteWebElement otherRemoteWebElement = (RemoteWebElement)other;
+/*     */ 
+/* 305 */             return this.id.equals(otherRemoteWebElement.id);
+/*     */          }
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public int hashCode() {
+/* 313 */       return this.id.hashCode();
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public WebDriver getWrappedDriver() {
+/* 322 */       return this.parent;
+/*     */    }
+/*     */ 
+/*     */    public boolean isDisplayed() {
+/* 326 */       Object value = this.execute("isElementDisplayed", ImmutableMap.of("id", this.id)).getValue();
+/*     */ 
+/*     */       try {
+/* 329 */          return (Boolean)value;
+/* 330 */       } catch (ClassCastException var3) {
+/* 331 */          throw new WebDriverException("Returned value cannot be converted to Boolean: " + value, var3);
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public Point getLocation() {
+/* 337 */       Response response = this.execute("getElementLocation", ImmutableMap.of("id", this.id));
+/* 338 */       Map<String, Object> rawPoint = (Map)response.getValue();
+/* 339 */       int x = ((Number)rawPoint.get("x")).intValue();
+/* 340 */       int y = ((Number)rawPoint.get("y")).intValue();
+/* 341 */       return new Point(x, y);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public Dimension getSize() {
+/* 346 */       Response response = this.execute("getElementSize", ImmutableMap.of("id", this.id));
+/* 347 */       Map<String, Object> rawSize = (Map)response.getValue();
+/* 348 */       int width = ((Number)rawSize.get("width")).intValue();
+/* 349 */       int height = ((Number)rawSize.get("height")).intValue();
+/* 350 */       return new Dimension(width, height);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */    public Rectangle getRect() {
+/* 355 */       Response response = this.execute("getElementRect", ImmutableMap.of("id", this.id));
+/* 356 */       Map<String, Object> rawRect = (Map)response.getValue();
+/* 357 */       int x = ((Number)rawRect.get("x")).intValue();
+/* 358 */       int y = ((Number)rawRect.get("y")).intValue();
+/* 359 */       int width = ((Number)rawRect.get("width")).intValue();
+/* 360 */       int height = ((Number)rawRect.get("height")).intValue();
+/* 361 */       return new Rectangle(x, y, height, width);
+/*     */    }
+/*     */ 
+/*     */    public Coordinates getCoordinates() {
+/* 365 */       return new 1(this);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    @Beta
+/*     */    public <X> X getScreenshotAs(OutputType<X> outputType) throws WebDriverException {
+/* 392 */       Response response = this.execute("elementScreenshot", ImmutableMap.of("id", this.id));
+/* 393 */       Object result = response.getValue();      String base64EncodedPng;
+/* 394 */       if (result instanceof String) {
+/* 395 */          base64EncodedPng = (String)result;
+/* 396 */          return outputType.convertFromBase64Png(base64EncodedPng);
+/* 397 */       } else if (result instanceof byte[]) {
+/* 398 */          base64EncodedPng = new String((byte[])((byte[])result));
+/* 399 */          return outputType.convertFromBase64Png(base64EncodedPng);
+/*     */       } else {
+/* 401 */          throw new RuntimeException(String.format("Unexpected result for %s command: %s", "elementScreenshot", result == null ? "null" : result.getClass().getName() + " instance"));
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public String toString() {
+/* 408 */       return this.foundBy == null ? String.format("[%s -> unknown locator]", super.toString()) : String.format("[%s]", this.foundBy);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public Map<String, Object> toJson() {
+/* 415 */       return ImmutableMap.of(Dialect.OSS.getEncodedElementKey(), this.getId(), Dialect.W3C.getEncodedElementKey(), this.getId());
+/*     */    }
+/*     */ }
