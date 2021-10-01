@@ -1,0 +1,162 @@
+/*     */ package org.openqa.selenium;
+/*     */ 
+/*     */ import java.util.List;
+/*     */ import org.openqa.selenium.By.ByClassName;
+/*     */ import org.openqa.selenium.By.ByCssSelector;
+/*     */ import org.openqa.selenium.By.ById;
+/*     */ import org.openqa.selenium.By.ByLinkText;
+/*     */ import org.openqa.selenium.By.ByName;
+/*     */ import org.openqa.selenium.By.ByPartialLinkText;
+/*     */ import org.openqa.selenium.By.ByTagName;
+/*     */ import org.openqa.selenium.By.ByXPath;
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ public abstract class By {
+/*     */    public static By id(String id) {
+/*  52 */       return new ById(id);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public static By linkText(String linkText) {
+/*  60 */       return new ByLinkText(linkText);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public static By partialLinkText(String partialLinkText) {
+/*  68 */       return new ByPartialLinkText(partialLinkText);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public static By name(String name) {
+/*  76 */       return new ByName(name);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public static By tagName(String tagName) {
+/*  84 */       return new ByTagName(tagName);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public static By xpath(String xpathExpression) {
+/*  92 */       return new ByXPath(xpathExpression);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public static By className(String className) {
+/* 104 */       return new ByClassName(className);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public static By cssSelector(String cssSelector) {
+/* 116 */       return new ByCssSelector(cssSelector);
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public WebElement findElement(SearchContext context) {
+/* 126 */       List<WebElement> allElements = this.findElements(context);
+/* 127 */       if (allElements != null && !allElements.isEmpty()) {      } else {
+/* 128 */          throw new NoSuchElementException("Cannot locate an element using " + this.toString());
+/*     */ 
+/* 130 */          return (WebElement)allElements.get(0);
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public boolean equals(Object o) {
+/* 143 */       if (!(o instanceof By)) {
+/* 144 */          return false;
+/*     */ 
+/*     */       } else {
+/* 147 */          By that = (By)o;
+/*     */ 
+/* 149 */          return this.toString().equals(that.toString());
+/*     */       }
+/*     */    }
+/*     */ 
+/*     */    public int hashCode() {
+/* 154 */       return this.toString().hashCode();
+/*     */    }
+/*     */ 
+/*     */ 
+/*     */ 
+/*     */    public String toString() {
+/* 160 */       return "[unknown locator]";
+/*     */    }
+/*     */ }
