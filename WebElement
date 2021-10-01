@@ -1,0 +1,39 @@
+
+// Warning: No line numbers available in class file
+package org.openqa.selenium;
+
+import java.util.List;
+
+public interface WebElement extends SearchContext, TakesScreenshot {
+   void click();
+
+   void submit();
+
+   void sendKeys(CharSequence... var1);
+
+   void clear();
+
+   String getTagName();
+
+   String getAttribute(String var1);
+
+   boolean isSelected();
+
+   boolean isEnabled();
+
+   String getText();
+
+   List<WebElement> findElements(By var1);
+
+   WebElement findElement(By var1);
+
+   boolean isDisplayed();
+
+   Point getLocation();
+
+   Dimension getSize();
+
+   Rectangle getRect();
+
+   String getCssValue(String var1);
+}
